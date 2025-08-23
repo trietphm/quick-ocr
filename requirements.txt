@@ -1,0 +1,4 @@
+PyQt5>=5.15.0
+pytesseract>=0.3.10
+Pillow>=9.0.0
+pyperclip>=1.8.2
