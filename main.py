@@ -1,16 +1,16 @@
 #!/usr/bin/env python3
 """
-Transparent OCR Application
-A transparent window application with OCR functionality using Tesseract.
+System Tray OCR Application
+A system tray application with OCR functionality using Tesseract.
 """
 
 import sys
 import os
-from PyQt5.QtWidgets import (QApplication, QMainWindow, QPushButton, QWidget, 
-                             QVBoxLayout, QHBoxLayout, QComboBox, QLabel)
-from PyQt5.QtCore import Qt, QRect, QTimer, pyqtSignal
-from PyQt5.QtGui import QPixmap, QPainter, QKeySequence, QIcon, QFont
-from PyQt5.Qt import QShortcut
+import argparse
+from PyQt5.QtWidgets import (QApplication, QSystemTrayIcon, QMenu, QAction, 
+                             QMessageBox)
+from PyQt5.QtCore import Qt, QTimer, pyqtSignal, QObject
+from PyQt5.QtGui import QIcon, QPixmap, QPainter
 import pytesseract
 from PIL import Image
 import pyperclip
@@ -18,185 +18,87 @@ import subprocess
 import tempfile
 
 
-class FloatingButton(QPushButton):
-    """Custom floating button with fixed position relative to parent"""
-    
-    def __init__(self, text, parent=None):
-        super().__init__(text, parent)
-        self.setFixedSize(40, 40)
-        self.setStyleSheet("""
-            QPushButton {
-                background-color: rgba(70, 130, 180, 200);
-                border: 2px solid rgba(255, 255, 255, 150);
-                border-radius: 20px;
-                color: white;
-                font-weight: bold;
-                font-size: 16px;
-            }
-            QPushButton:hover {
-                background-color: rgba(100, 149, 237, 220);
-                border: 2px solid rgba(255, 255, 255, 200);
-            }
-            QPushButton:pressed {
-                background-color: rgba(65, 105, 225, 240);
-            }
-        """)
-
-
-class LanguageButton(QPushButton):
-    """Language selection button"""
-    
-    language_changed = pyqtSignal(str)
+class OCRTrayIcon(QSystemTrayIcon):
+    """System tray icon with OCR functionality"""
     
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.languages = {'EN': 'eng', 'CN': 'chi_sim'}
-        self.current_lang = 'EN'
-        self.setText(self.current_lang)
-        self.setFixedSize(40, 40)
-        self.setStyleSheet("""
-            QPushButton {
-                background-color: rgba(255, 140, 0, 200);
-                border: 2px solid rgba(255, 255, 255, 150);
-                border-radius: 20px;
-                color: white;
-                font-weight: bold;
-                font-size: 12px;
-            }
-            QPushButton:hover {
-                background-color: rgba(255, 165, 0, 220);
-                border: 2px solid rgba(255, 255, 255, 200);
-            }
-            QPushButton:pressed {
-                background-color: rgba(255, 69, 0, 240);
-            }
-        """)
-        self.clicked.connect(self.toggle_language)
-    
-    def toggle_language(self):
-        """Toggle between English and Chinese"""
-        self.current_lang = 'CN' if self.current_lang == 'EN' else 'EN'
-        self.setText(self.current_lang)
-        self.language_changed.emit(self.languages[self.current_lang])
-
-
-class TransparentOCRWindow(QMainWindow):
-    """Main transparent window with OCR functionality"""
-    
-    def __init__(self):
-        super().__init__()
         self.current_language = 'eng'  # Default to English
-        self.drag_start_position = None
-        self.init_ui()
-        self.setup_shortcuts()
+        self.languages = {'English': 'eng', 'Chinese': 'chi_sim'}
         
-    def init_ui(self):
-        """Initialize the user interface"""
-        self.setWindowTitle("Transparent OCR")
-        self.setGeometry(100, 100, 800, 600)
+        # Create tray icon
+        self.setIcon(self.create_icon())
+        self.setToolTip("OCR System Tray")
         
-        # Make window transparent but keep native frame
-        self.setWindowFlags(
-            Qt.Window | 
-            Qt.WindowStaysOnTopHint
-        )
-        self.setAttribute(Qt.WA_TranslucentBackground)
+        # Create context menu
+        self.create_context_menu()
         
-        # Create central widget
-        central_widget = QWidget()
-        self.setCentralWidget(central_widget)
+        # Show the tray icon
+        self.show()
         
-        # Create button container at top-right
-        button_layout = QHBoxLayout()
-        button_layout.setContentsMargins(5, 5, 5, 5)
-        button_layout.setSpacing(10)
+    def create_icon(self):
+        """Create a simple icon for the system tray"""
+        # Create a simple colored icon
+        pixmap = QPixmap(16, 16)
+        pixmap.fill(Qt.transparent)
         
-        # Language selection button
-        self.lang_button = LanguageButton(self)
-        self.lang_button.language_changed.connect(self.set_language)
+        painter = QPainter(pixmap)
+        painter.setRenderHint(QPainter.Antialiasing)
+        painter.setBrush(Qt.blue)
+        painter.setPen(Qt.white)
+        painter.drawEllipse(0, 0, 16, 16)
+        painter.drawText(4, 12, "O")
+        painter.end()
         
-        # OCR capture button
-        self.ocr_button = FloatingButton("📷", self)
-        self.ocr_button.clicked.connect(self.capture_and_ocr)
-        self.ocr_button.setToolTip("Capture OCR (Ctrl+Enter)")
+        return QIcon(pixmap)
+    
+    def create_context_menu(self):
+        """Create the context menu for the tray icon"""
+        menu = QMenu()
         
-        # Add buttons to layout
-        button_layout.addStretch()  # Push buttons to the right
-        button_layout.addWidget(self.lang_button)
-        button_layout.addWidget(self.ocr_button)
+        # OCR Capture action
+        ocr_action = QAction("📷 Capture OCR", self)
+        ocr_action.triggered.connect(self.capture_and_ocr)
+        menu.addAction(ocr_action)
         
-        # Create compact button container with background
-        self.button_container = QWidget()
-        self.button_container.setLayout(button_layout)
-        self.button_container.setFixedHeight(50)
-        self.button_container.setStyleSheet("""
-            QWidget {
-                background-color: rgba(45, 45, 45, 200);
-                border-radius: 5px;
-                margin: 5px;
-            }
-        """)
+        menu.addSeparator()
         
-        # Main content area (transparent)
-        content_widget = QWidget()
-        content_widget.setStyleSheet("""
-            QWidget {
-                background-color: rgba(0, 0, 0, 0);
-            }
-        """)
+        # Language selection submenu
+        lang_menu = menu.addMenu("🌐 Language")
         
-        # Main layout
-        main_layout = QVBoxLayout()
-        main_layout.setContentsMargins(5, 5, 5, 5)
-        main_layout.setSpacing(0)
-        main_layout.addWidget(self.button_container)
-        main_layout.addWidget(content_widget)
+        for lang_name, lang_code in self.languages.items():
+            lang_action = QAction(lang_name, self)
+            lang_action.setCheckable(True)
+            lang_action.setChecked(lang_code == self.current_language)
+            lang_action.triggered.connect(lambda checked, code=lang_code: self.set_language(code))
+            lang_menu.addAction(lang_action)
         
-        central_widget.setLayout(main_layout)
+        menu.addSeparator()
         
-        # Style the main window (transparent background)
-        self.setStyleSheet("""
-            QMainWindow {
-                background-color: rgba(0, 0, 0, 0);
-            }
-        """)
+        # Quit action
+        quit_action = QAction("❌ Quit", self)
+        quit_action.triggered.connect(QApplication.instance().quit)
+        menu.addAction(quit_action)
         
-    def setup_shortcuts(self):
-        """Setup keyboard shortcuts"""
-        # Ctrl+Enter for OCR capture
-        ocr_shortcut = QShortcut(QKeySequence("Ctrl+Return"), self)
-        ocr_shortcut.activated.connect(self.capture_and_ocr)
-        
-        # Escape to close
-        close_shortcut = QShortcut(QKeySequence("Escape"), self)
-        close_shortcut.activated.connect(self.close)
-        
+        self.setContextMenu(menu)
+    
     def set_language(self, lang_code):
-        """Set the OCR language"""
+        """Set the OCR language and update menu"""
         self.current_language = lang_code
         print(f"OCR language set to: {lang_code}")
         
+        # Update checkmarks in language menu
+        lang_menu = self.contextMenu().actions()[2].menu()  # Language submenu
+        for i, (lang_name, code) in enumerate(self.languages.items()):
+            action = lang_menu.actions()[i]
+            action.setChecked(code == lang_code)
+
+
     def capture_and_ocr(self):
-        """Capture screenshot of the window area and perform OCR"""
+        """Capture screenshot and perform OCR"""
         try:
-            # Get window geometry
-            geometry = self.geometry()
-            
-            # Hide window temporarily for clean screenshot
-            self.hide()
-            
-            # Wait a bit for window to disappear
-            QTimer.singleShot(200, lambda: self._perform_capture(geometry))
-            
-        except Exception as e:
-            print(f"Error in capture_and_ocr: {e}")
-            self.show()
-            
-    def _perform_capture(self, geometry):
-        """Perform the actual screenshot capture and OCR"""
-        try:
-            # Take screenshot of the specified area
-            screenshot = self.take_screenshot(geometry)
+            # Take screenshot using area selection
+            screenshot = self.take_screenshot()
             
             if screenshot:
                 # Perform OCR
@@ -206,31 +108,27 @@ class TransparentOCRWindow(QMainWindow):
                     # Copy to clipboard
                     pyperclip.copy(text)
                     print(f"OCR Result copied to clipboard:\n{text}")
-                    
-                    # Visual feedback
-                    self.show_feedback("OCR copied to clipboard!")
+                    self.showMessage("OCR Success", f"Text copied to clipboard:\n{text[:100]}{'...' if len(text) > 100 else ''}", 
+                                   QSystemTrayIcon.Information, 3000)
                 else:
                     print("No text detected in the captured area")
-                    self.show_feedback("No text detected")
+                    self.showMessage("OCR Result", "No text detected", QSystemTrayIcon.Warning, 2000)
             else:
                 print("Failed to capture screenshot")
-                self.show_feedback("Capture failed")
+                self.showMessage("OCR Error", "Screenshot capture failed", QSystemTrayIcon.Critical, 2000)
                 
         except Exception as e:
             print(f"Error in OCR process: {e}")
-            self.show_feedback(f"Error: {str(e)}")
-        finally:
-            # Show window again
-            self.show()
+            self.showMessage("OCR Error", f"Error: {str(e)}", QSystemTrayIcon.Critical, 3000)
             
-    def take_screenshot(self, geometry):
-        """Take screenshot of specified area using gnome-screenshot"""
+    def take_screenshot(self):
+        """Take screenshot using area selection"""
         try:
-            # Use gnome-screenshot for Wayland compatibility
+            # Use gnome-screenshot for area selection
             with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as tmp_file:
                 temp_path = tmp_file.name
                 
-            # Command to capture specific area
+            # Command to capture area selection
             cmd = [
                 'gnome-screenshot',
                 '--area',
@@ -239,19 +137,30 @@ class TransparentOCRWindow(QMainWindow):
             
             # Alternative: use grim for Wayland if gnome-screenshot is not available
             try:
-                result = subprocess.run(cmd, capture_output=True, timeout=10)
+                result = subprocess.run(cmd, capture_output=True, timeout=30)
                 if result.returncode != 0:
                     raise subprocess.CalledProcessError(result.returncode, cmd)
             except (subprocess.CalledProcessError, FileNotFoundError):
-                # Fallback to grim (Wayland screenshot tool)
-                cmd = [
-                    'grim', '-g', 
-                    f"{geometry.x()},{geometry.y()} {geometry.width()}x{geometry.height()}",
-                    temp_path
-                ]
-                result = subprocess.run(cmd, capture_output=True, timeout=10)
-                if result.returncode != 0:
-                    raise subprocess.CalledProcessError(result.returncode, cmd)
+                # Fallback to grim (Wayland screenshot tool) with slurp for area selection
+                try:
+                    # First get the area using slurp
+                    slurp_result = subprocess.run(['slurp'], capture_output=True, timeout=30, text=True)
+                    if slurp_result.returncode != 0:
+                        raise subprocess.CalledProcessError(slurp_result.returncode, ['slurp'])
+                    
+                    area = slurp_result.stdout.strip()
+                    
+                    # Then capture with grim
+                    cmd = ['grim', '-g', area, temp_path]
+                    result = subprocess.run(cmd, capture_output=True, timeout=10)
+                    if result.returncode != 0:
+                        raise subprocess.CalledProcessError(result.returncode, cmd)
+                except (subprocess.CalledProcessError, FileNotFoundError):
+                    # Final fallback to simple grim (full screen)
+                    cmd = ['grim', temp_path]
+                    result = subprocess.run(cmd, capture_output=True, timeout=10)
+                    if result.returncode != 0:
+                        raise subprocess.CalledProcessError(result.returncode, cmd)
             
             # Load the image
             if os.path.exists(temp_path):
@@ -283,17 +192,33 @@ class TransparentOCRWindow(QMainWindow):
         except Exception as e:
             print(f"OCR error: {e}")
             return ""
-            
-    def show_feedback(self, message):
-        """Show visual feedback to user"""
-        print(f"Feedback: {message}")
-        # You could implement a temporary tooltip or notification here
         
 
 
 
-def main():
-    """Main application entry point"""
+def parse_arguments():
+    """Parse command line arguments"""
+    parser = argparse.ArgumentParser(
+        description="System Tray OCR Application",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  python3 main.py          # Run in system tray mode
+  python3 main.py ocr      # Directly trigger OCR capture and exit
+        """
+    )
+    parser.add_argument(
+        'action', 
+        nargs='?', 
+        choices=['ocr'], 
+        help='Action to perform (ocr: capture and perform OCR)'
+    )
+    return parser.parse_args()
+
+
+def run_direct_ocr():
+    """Run OCR capture directly without GUI"""
+    # Create a minimal QApplication for OCR functionality
     app = QApplication(sys.argv)
     
     # Check if tesseract is installed
@@ -305,9 +230,48 @@ def main():
         print("sudo dnf install tesseract tesseract-langpack-eng tesseract-langpack-chi-sim")
         sys.exit(1)
     
-    # Create and show the main window
-    window = TransparentOCRWindow()
-    window.show()
+    # Create OCR instance and run capture
+    ocr_tray = OCRTrayIcon()
+    ocr_tray.capture_and_ocr()
+    
+    # Exit after OCR operation
+    sys.exit(0)
+
+
+def main():
+    """Main application entry point"""
+    args = parse_arguments()
+    
+    # If OCR action is specified, run direct OCR
+    if args.action == 'ocr':
+        run_direct_ocr()
+        return
+    
+    # Create QApplication for system tray mode
+    app = QApplication(sys.argv)
+    
+    # Check if system tray is available
+    if not QSystemTrayIcon.isSystemTrayAvailable():
+        QMessageBox.critical(None, "System Tray", 
+                            "System tray is not available on this system.")
+        sys.exit(1)
+    
+    # Check if tesseract is installed
+    try:
+        pytesseract.get_tesseract_version()
+    except Exception as e:
+        print(f"Tesseract not found: {e}")
+        print("Please install tesseract-ocr:")
+        print("sudo dnf install tesseract tesseract-langpack-eng tesseract-langpack-chi-sim")
+        sys.exit(1)
+    
+    # Don't quit when last window is closed (for system tray apps)
+    app.setQuitOnLastWindowClosed(False)
+    
+    # Create and show the system tray icon
+    tray_icon = OCRTrayIcon()
+    
+    print("OCR System Tray application started. Right-click the tray icon to access options.")
     
     sys.exit(app.exec_())
 

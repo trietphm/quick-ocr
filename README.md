@@ -1,13 +1,13 @@
-# Transparent OCR Application
+# System Tray OCR Application
 
-A Linux application with a transparent window that can capture screenshots and perform OCR (Optical Character Recognition) using Tesseract. Designed specifically for Fedora and Wayland compatibility.
+A Linux system tray application that can capture screenshots and perform OCR (Optical Character Recognition) using Tesseract. Designed specifically for Fedora and Wayland compatibility.
 
 ## Features
 
-- **Transparent Window**: See-through window that can be resized and moved
-- **OCR Capture**: Screenshot capture with automatic text recognition
+- **System Tray Integration**: Runs quietly in the system tray
+- **OCR Capture**: Screenshot area selection with automatic text recognition
 - **Language Support**: English and Chinese Simplified OCR
-- **Keyboard Shortcut**: Ctrl+Enter for quick OCR capture
+- **Command Line Support**: Direct OCR capture via command line
 - **Clipboard Integration**: Automatically copies detected text to clipboard
 - **Wayland Compatible**: Works on modern Linux desktop environments
 
@@ -22,7 +22,7 @@ Install the required system packages on Fedora:
 sudo dnf install tesseract tesseract-langpack-eng tesseract-langpack-chi-sim
 
 # Install screenshot tools for Wayland
-sudo dnf install gnome-screenshot grim
+sudo dnf install gnome-screenshot grim slurp
 
 # Install Python development packages
 sudo dnf install python3-pip python3-devel
@@ -58,49 +58,64 @@ pip install PyQt5 pytesseract Pillow pyperclip
 
 ### Running the Application
 
+#### System Tray Mode (Default)
 ```bash
 python3 main.py
 ```
 
-### Controls
+The application will run in the system tray. Right-click the tray icon to access options.
 
-- **Move Window**: Click and drag anywhere on the window border
-- **Resize Window**: Drag the window edges (standard window resizing)
-- **Language Toggle**: Click the orange "EN/CN" button to switch between English and Chinese
-- **OCR Capture**: 
-  - Click the blue camera button (📷)
-  - Or press **Ctrl+Enter**
-- **Close Application**: Press **Escape**
+#### Command Line OCR
+```bash
+python3 main.py ocr
+```
+
+This will immediately trigger the area selection for OCR capture and exit after completion.
+
+#### Using the run script
+```bash
+./run.sh          # System tray mode
+./run.sh ocr      # Direct OCR capture
+```
+
+### System Tray Controls
+
+- **Right-click tray icon** to open context menu
+- **📷 Capture OCR**: Start area selection for OCR
+- **🌐 Language**: Switch between English and Chinese
+- **❌ Quit**: Exit the application
 
 ### How It Works
 
-1. Position the transparent window over the text you want to capture
-2. Click the OCR button or press Ctrl+Enter
+1. **System Tray Mode**: Click "Capture OCR" from the tray menu
+2. **Command Line Mode**: Run `python3 main.py ocr`
 3. The application will:
-   - Temporarily hide the window
-   - Capture a screenshot of the area
+   - Show an area selection cursor
+   - Let you drag to select the text area
+   - Capture a screenshot of the selected area
    - Process the image with Tesseract OCR
    - Copy the detected text to your clipboard
-   - Show the window again
+   - Show a notification with the result
 
 ## Features Details
 
-### Window Properties
-- Fully transparent background
-- Stays on top of other windows
-- Frameless design for minimal interference
-- Resizable and movable
+### System Tray Integration
+- Runs quietly in the background
+- Minimal resource usage when idle
+- Easy access via right-click menu
+- Clean, unobtrusive operation
 
 ### OCR Functionality
 - Uses [Tesseract OCR Engine](https://github.com/tesseract-ocr/tesseract)
 - Supports English (`eng`) and Chinese Simplified (`chi_sim`)
+- Interactive area selection for precise capture
 - Automatic text recognition and clipboard integration
 - Works with various image qualities
 
-### UI Elements
-- **Blue Camera Button**: Triggers OCR capture
-- **Orange Language Button**: Toggles between EN (English) and CN (Chinese)
-- Both buttons are positioned at the top-right of the window
+### Command Line Interface
+- `python3 main.py` - Start system tray mode
+- `python3 main.py ocr` - Direct OCR capture
+- `python3 main.py --help` - Show usage information
 
 ## Troubleshooting
 
@@ -112,8 +127,8 @@ python3 main.py
    ```
 
 2. **Screenshot not working**:
-   - Install `gnome-screenshot`: `sudo dnf install gnome-screenshot`
-   - Or install `grim` for Wayland: `sudo dnf install grim`
+   - Install required tools: `sudo dnf install gnome-screenshot grim slurp`
+   - The app tries `gnome-screenshot` first, then falls back to `grim` with `slurp`
 
 3. **PyQt5 import error**:
    ```bash
@@ -121,17 +136,19 @@ python3 main.py
    pip install PyQt5
    ```
 
-4. **Window not transparent**:
-   - Ensure you're running on a compositor-enabled desktop environment
-   - Try running with `QT_QPA_PLATFORM=wayland python3 main.py`
+4. **System tray not visible**:
+   - Ensure your desktop environment supports system tray
+   - Some minimal desktop environments may not show system tray icons
+   - Try using the command line mode: `python3 main.py ocr`
 
 ### Wayland Specific Notes
 
 This application is designed to work with Wayland. If you encounter issues:
 
 - Make sure you have a Wayland-compatible screenshot tool installed
-- The application tries `gnome-screenshot` first, then falls back to `grim`
+- The application tries `gnome-screenshot` first, then falls back to `grim` with `slurp`
 - Some desktop environments may require additional permissions for screenshot capture
+- For area selection, `slurp` is required when using `grim`
 
 ## Development
 
@@ -140,13 +157,13 @@ This application is designed to work with Wayland. If you encounter issues:
 ocr/
 ├── main.py           # Main application file
 ├── requirements.txt  # Python dependencies
+├── run.sh           # Convenience script
 └── README.md        # This file
 ```
 
 ### Key Classes
-- `TransparentOCRWindow`: Main application window
-- `FloatingButton`: OCR capture button
-- `LanguageButton`: Language selection button
+- `OCRTrayIcon`: System tray application with OCR functionality
+- Command line argument parsing for direct OCR execution
 
 ## License
 
