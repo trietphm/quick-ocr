@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-System Tray OCR Application
+Quick OCR Application
 A system tray application with OCR functionality using Tesseract.
 """
 
@@ -24,11 +24,15 @@ class OCRTrayIcon(QSystemTrayIcon):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.current_language = 'eng'  # Default to English
-        self.languages = {'English': 'eng', 'Chinese': 'chi_sim'}
+        self.languages = {
+            'English': 'eng', 
+            'Chinese': 'chi_sim',
+            'English + Chinese': 'eng+chi_sim'
+        }
         
         # Create tray icon
         self.setIcon(self.create_icon())
-        self.setToolTip("OCR System Tray")
+        self.setToolTip("Quick OCR")
         
         # Create context menu
         self.create_context_menu()
@@ -199,12 +203,15 @@ class OCRTrayIcon(QSystemTrayIcon):
 def parse_arguments():
     """Parse command line arguments"""
     parser = argparse.ArgumentParser(
-        description="System Tray OCR Application",
+        description="Quick OCR Application",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  python3 main.py          # Run in system tray mode
-  python3 main.py ocr      # Directly trigger OCR capture and exit
+  python3 main.py                        # Run in system tray mode
+  python3 main.py ocr                    # Directly trigger OCR capture (English)
+  python3 main.py ocr --lang eng         # OCR capture with English
+  python3 main.py ocr --lang chi_sim     # OCR capture with Chinese
+  python3 main.py ocr --lang eng+chi_sim # OCR capture with both languages
         """
     )
     parser.add_argument(
@@ -213,10 +220,16 @@ Examples:
         choices=['ocr'], 
         help='Action to perform (ocr: capture and perform OCR)'
     )
+    parser.add_argument(
+        '--lang', '--language',
+        choices=['eng', 'chi_sim', 'eng+chi_sim'],
+        default='eng',
+        help='OCR language: eng (English), chi_sim (Chinese), or eng+chi_sim (both). Default: eng'
+    )
     return parser.parse_args()
 
 
-def run_direct_ocr():
+def run_direct_ocr(language='eng'):
     """Run OCR capture directly without GUI"""
     # Create a minimal QApplication for OCR functionality
     app = QApplication(sys.argv)
@@ -230,8 +243,12 @@ def run_direct_ocr():
         print("sudo dnf install tesseract tesseract-langpack-eng tesseract-langpack-chi-sim")
         sys.exit(1)
     
-    # Create OCR instance and run capture
+    # Create OCR instance and set language
     ocr_tray = OCRTrayIcon()
+    ocr_tray.current_language = language
+    print(f"Using OCR language: {language}")
+    
+    # Run capture
     ocr_tray.capture_and_ocr()
     
     # Exit after OCR operation
@@ -244,7 +261,7 @@ def main():
     
     # If OCR action is specified, run direct OCR
     if args.action == 'ocr':
-        run_direct_ocr()
+        run_direct_ocr(args.lang)
         return
     
     # Create QApplication for system tray mode
@@ -271,7 +288,7 @@ def main():
     # Create and show the system tray icon
     tray_icon = OCRTrayIcon()
     
-    print("OCR System Tray application started. Right-click the tray icon to access options.")
+    print("Quick OCR application started. Right-click the tray icon to access options.")
     
     sys.exit(app.exec_())
 
