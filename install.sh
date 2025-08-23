@@ -62,7 +62,7 @@ install_system_dependencies() {
     
     case $PKG_MANAGER in
         "dnf")
-            dnf install -y tesseract tesseract-langpack-eng tesseract-langpack-chi-sim \
+            dnf install -y tesseract tesseract-langpack-eng tesseract-langpack-chi_sim \
                           python3-qt5 python3-pip gnome-screenshot grim slurp \
                           python3-devel || true
             ;;

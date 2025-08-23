@@ -240,7 +240,7 @@ def run_direct_ocr(language='eng'):
     except Exception as e:
         print(f"Tesseract not found: {e}")
         print("Please install tesseract-ocr:")
-        print("sudo dnf install tesseract tesseract-langpack-eng tesseract-langpack-chi-sim")
+        print("sudo dnf install tesseract tesseract-langpack-eng tesseract-langpack-chi_sim")
         sys.exit(1)
     
     # Create OCR instance and set language
@@ -279,7 +279,7 @@ def main():
     except Exception as e:
         print(f"Tesseract not found: {e}")
         print("Please install tesseract-ocr:")
-        print("sudo dnf install tesseract tesseract-langpack-eng tesseract-langpack-chi-sim")
+        print("sudo dnf install tesseract tesseract-langpack-eng tesseract-langpack-chi_sim")
         sys.exit(1)
     
     # Don't quit when last window is closed (for system tray apps)

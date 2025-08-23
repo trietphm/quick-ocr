@@ -143,7 +143,7 @@ show_cleanup_info() {
     
     # Detect package manager and show appropriate commands
     if command -v dnf &> /dev/null; then
-        echo "    sudo dnf remove tesseract tesseract-langpack-eng tesseract-langpack-chi-sim"
+        echo "    sudo dnf remove tesseract tesseract-langpack-eng tesseract-langpack-chi_sim"
         echo "    sudo dnf remove python3-qt5 gnome-screenshot grim slurp"
     elif command -v apt &> /dev/null; then
         echo "    sudo apt remove tesseract-ocr tesseract-ocr-eng tesseract-ocr-chi-sim"
