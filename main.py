@@ -18,86 +18,22 @@ import subprocess
 import tempfile
 
 
-class OCRTrayIcon(QSystemTrayIcon):
-    """System tray icon with OCR functionality"""
+class OCREngine:
+    """Core OCR functionality without GUI dependencies"""
     
-    def __init__(self, parent=None):
-        super().__init__(parent)
+    def __init__(self):
         self.current_language = 'eng'  # Default to English
         self.languages = {
             'English': 'eng', 
             'Chinese': 'chi_sim',
             'English + Chinese': 'eng+chi_sim'
         }
-        
-        # Create tray icon
-        self.setIcon(self.create_icon())
-        self.setToolTip("Quick OCR")
-        
-        # Create context menu
-        self.create_context_menu()
-        
-        # Show the tray icon
-        self.show()
-        
-    def create_icon(self):
-        """Create a simple icon for the system tray"""
-        # Create a simple colored icon
-        pixmap = QPixmap(16, 16)
-        pixmap.fill(Qt.transparent)
-        
-        painter = QPainter(pixmap)
-        painter.setRenderHint(QPainter.Antialiasing)
-        painter.setBrush(Qt.blue)
-        painter.setPen(Qt.white)
-        painter.drawEllipse(0, 0, 16, 16)
-        painter.drawText(4, 12, "O")
-        painter.end()
-        
-        return QIcon(pixmap)
-    
-    def create_context_menu(self):
-        """Create the context menu for the tray icon"""
-        menu = QMenu()
-        
-        # OCR Capture action
-        ocr_action = QAction("📷 Capture OCR", self)
-        ocr_action.triggered.connect(self.capture_and_ocr)
-        menu.addAction(ocr_action)
-        
-        menu.addSeparator()
-        
-        # Language selection submenu
-        lang_menu = menu.addMenu("🌐 Language")
-        
-        for lang_name, lang_code in self.languages.items():
-            lang_action = QAction(lang_name, self)
-            lang_action.setCheckable(True)
-            lang_action.setChecked(lang_code == self.current_language)
-            lang_action.triggered.connect(lambda checked, code=lang_code: self.set_language(code))
-            lang_menu.addAction(lang_action)
-        
-        menu.addSeparator()
-        
-        # Quit action
-        quit_action = QAction("❌ Quit", self)
-        quit_action.triggered.connect(QApplication.instance().quit)
-        menu.addAction(quit_action)
-        
-        self.setContextMenu(menu)
     
     def set_language(self, lang_code):
-        """Set the OCR language and update menu"""
+        """Set the OCR language"""
         self.current_language = lang_code
         print(f"OCR language set to: {lang_code}")
-        
-        # Update checkmarks in language menu
-        lang_menu = self.contextMenu().actions()[2].menu()  # Language submenu
-        for i, (lang_name, code) in enumerate(self.languages.items()):
-            action = lang_menu.actions()[i]
-            action.setChecked(code == lang_code)
-
-
+    
     def capture_and_ocr(self):
         """Capture screenshot and perform OCR"""
         try:
@@ -112,18 +48,17 @@ class OCRTrayIcon(QSystemTrayIcon):
                     # Copy to clipboard
                     pyperclip.copy(text)
                     print(f"OCR Result copied to clipboard:\n{text}")
-                    self.showMessage("OCR Success", f"Text copied to clipboard:\n{text[:100]}{'...' if len(text) > 100 else ''}", 
-                                   QSystemTrayIcon.Information, 3000)
+                    return text
                 else:
                     print("No text detected in the captured area")
-                    self.showMessage("OCR Result", "No text detected", QSystemTrayIcon.Warning, 2000)
+                    return None
             else:
                 print("Failed to capture screenshot")
-                self.showMessage("OCR Error", "Screenshot capture failed", QSystemTrayIcon.Critical, 2000)
+                return None
                 
         except Exception as e:
             print(f"Error in OCR process: {e}")
-            self.showMessage("OCR Error", f"Error: {str(e)}", QSystemTrayIcon.Critical, 3000)
+            return None
             
     def take_screenshot(self):
         """Take screenshot using area selection"""
@@ -196,8 +131,104 @@ class OCRTrayIcon(QSystemTrayIcon):
         except Exception as e:
             print(f"OCR error: {e}")
             return ""
-        
 
+
+class OCRTrayIcon(QSystemTrayIcon):
+    """System tray icon with OCR functionality"""
+    
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.ocr_engine = OCREngine()
+        self.current_language = 'eng'  # Default to English
+        self.languages = {
+            'English': 'eng', 
+            'Chinese': 'chi_sim',
+            'English + Chinese': 'eng+chi_sim'
+        }
+        
+        # Create tray icon
+        self.setIcon(self.create_icon())
+        self.setToolTip("Quick OCR")
+        
+        # Create context menu
+        self.create_context_menu()
+        
+        # Show the tray icon
+        self.show()
+        
+    def create_icon(self):
+        """Create a simple icon for the system tray"""
+        # Create a simple colored icon
+        pixmap = QPixmap(16, 16)
+        pixmap.fill(Qt.transparent)
+        
+        painter = QPainter(pixmap)
+        painter.setRenderHint(QPainter.Antialiasing)
+        painter.setBrush(Qt.blue)
+        painter.setPen(Qt.white)
+        painter.drawEllipse(0, 0, 16, 16)
+        painter.drawText(4, 12, "O")
+        painter.end()
+        
+        return QIcon(pixmap)
+    
+    def create_context_menu(self):
+        """Create the context menu for the tray icon"""
+        menu = QMenu()
+        
+        # OCR Capture action
+        ocr_action = QAction("📷 Capture OCR", self)
+        ocr_action.triggered.connect(self.capture_and_ocr)
+        menu.addAction(ocr_action)
+        
+        menu.addSeparator()
+        
+        # Language selection submenu
+        lang_menu = menu.addMenu("🌐 Language")
+        
+        for lang_name, lang_code in self.languages.items():
+            lang_action = QAction(lang_name, self)
+            lang_action.setCheckable(True)
+            lang_action.setChecked(lang_code == self.current_language)
+            lang_action.triggered.connect(lambda checked, code=lang_code: self.set_language(code))
+            lang_menu.addAction(lang_action)
+        
+        menu.addSeparator()
+        
+        # Quit action
+        quit_action = QAction("❌ Quit", self)
+        quit_action.triggered.connect(QApplication.instance().quit)
+        menu.addAction(quit_action)
+        
+        self.setContextMenu(menu)
+    
+    def set_language(self, lang_code):
+        """Set the OCR language and update menu"""
+        self.current_language = lang_code
+        self.ocr_engine.set_language(lang_code)
+        
+        # Update checkmarks in language menu
+        lang_menu = self.contextMenu().actions()[2].menu()  # Language submenu
+        for i, (lang_name, code) in enumerate(self.languages.items()):
+            action = lang_menu.actions()[i]
+            action.setChecked(code == lang_code)
+
+
+    def capture_and_ocr(self):
+        """Capture screenshot and perform OCR"""
+        try:
+            # Delegate to OCR engine
+            text = self.ocr_engine.capture_and_ocr()
+            
+            if text:
+                self.showMessage("OCR Success", f"Text copied to clipboard:\n{text[:100]}{'...' if len(text) > 100 else ''}", 
+                               QSystemTrayIcon.Information, 3000)
+            else:
+                self.showMessage("OCR Result", "No text detected or capture failed", QSystemTrayIcon.Warning, 2000)
+                
+        except Exception as e:
+            print(f"Error in OCR process: {e}")
+            self.showMessage("OCR Error", f"Error: {str(e)}", QSystemTrayIcon.Critical, 3000)
 
 
 def parse_arguments():
@@ -231,7 +262,7 @@ Examples:
 
 def run_direct_ocr(language='eng'):
     """Run OCR capture directly without GUI"""
-    # Create a minimal QApplication for OCR functionality
+    # Create a minimal QApplication for OCR functionality (needed for clipboard access)
     app = QApplication(sys.argv)
     
     # Check if tesseract is installed
@@ -243,13 +274,12 @@ def run_direct_ocr(language='eng'):
         print("sudo dnf install tesseract tesseract-langpack-eng tesseract-langpack-chi-sim")
         sys.exit(1)
     
-    # Create OCR instance and set language
-    ocr_tray = OCRTrayIcon()
-    ocr_tray.current_language = language
-    print(f"Using OCR language: {language}")
+    # Create OCR engine instance and set language
+    ocr_engine = OCREngine()
+    ocr_engine.set_language(language)
     
     # Run capture
-    ocr_tray.capture_and_ocr()
+    ocr_engine.capture_and_ocr()
     
     # Exit after OCR operation
     sys.exit(0)

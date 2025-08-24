@@ -32,11 +32,11 @@ pip install PyQt5 pytesseract Pillow pyperclip
 ```bash
 # System tray mode
 python3 main.py
-ocr-tray                        # After install
+quick-ocr                        # After install
 
 # Direct OCR  
 python3 main.py ocr --lang eng+chi_sim
-ocr-tray ocr --lang eng+chi_sim # After install
+quick-ocr ocr --lang eng+chi_sim # After install
 ```
 
 ## Uninstall
@@ -47,7 +47,7 @@ sudo ./uninstall.sh
 ## Keyboard Shortcut Setup
 
 After installation, set up a keyboard shortcut in GNOME Settings:
-- **Command**: `/usr/local/bin/ocr-tray ocr`
+- **Command**: `/usr/local/bin/quick-ocr ocr`
 - **Key**: `Ctrl+Shift+O` (or your preference)
 
 ## Language Options
@@ -63,4 +63,4 @@ After installation, set up a keyboard shortcut in GNOME Settings:
 
 **PyQt5 error**: `sudo dnf install python3-qt5`
 
-**No system tray**: Use command line mode `ocr-tray ocr`
+**No system tray**: Use command line mode `quick-ocr ocr`

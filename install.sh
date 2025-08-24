@@ -5,7 +5,7 @@
 
 set -e  # Exit on any error
 
-APP_NAME="ocr-tray"
+APP_NAME="quick-ocr"
 INSTALL_DIR="/opt/$APP_NAME"
 BIN_DIR="/usr/local/bin"
 DESKTOP_DIR="/usr/share/applications"
@@ -178,7 +178,7 @@ create_uninstaller() {
 
 # Quick OCR Application - Uninstaller Script
 
-APP_NAME="ocr-tray"
+APP_NAME="quick-ocr"
 INSTALL_DIR="/opt/$APP_NAME"
 BIN_DIR="/usr/local/bin"
 DESKTOP_DIR="/usr/share/applications"
