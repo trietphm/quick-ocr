@@ -21,7 +21,7 @@ sudo ./install.sh
 ### Manual Install  
 ```bash
 # Install dependencies (Fedora)
-sudo dnf install tesseract tesseract-langpack-eng tesseract-langpack-chi-sim python3-qt5 gnome-screenshot grim slurp
+sudo dnf install tesseract tesseract-langpack-eng tesseract-langpack-chi_sim python3-qt5 gnome-screenshot grim slurp
 
 # Install Python packages
 pip install PyQt5 pytesseract Pillow pyperclip
